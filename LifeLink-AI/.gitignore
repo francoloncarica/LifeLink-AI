@@ -1,0 +1,16 @@
+# Byte-compiled / optimized / virtualenv
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+*.log
+
+# Local / editor
+.DS_Store
+_smoke.py
+.vscode/

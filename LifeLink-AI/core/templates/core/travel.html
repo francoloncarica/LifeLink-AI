@@ -1,0 +1,35 @@
+{% extends 'core/base.html' %}
+{% block title %}Viajes · LifeLink AI{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Planes de viaje</h1>
+      <p class="page-sub">Recomendaciones y riesgos para tus próximos viajes.</p>
+    </div>
+    <div class="page-actions">
+      <a class="btn" href="{% url 'core:dashboard' %}">Volver</a>
+    </div>
+  </div>
+
+  <section>
+    <div class="card">
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Destino</th><th>Fechas</th><th>Riesgo</th><th class="num">Acciones</th></tr></thead>
+          <tbody>
+            {% for t in plans %}
+            <tr>
+              <td>{{ t.destination_city }}, {{ t.destination_country }}</td>
+              <td>{{ t.start_date }} → {{ t.end_date }}</td>
+              <td>{{ t.risk_level }}</td>
+              <td class="num"><a href="{% url 'core:travel_detail' t.id %}" class="pill">Ver</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="muted">No hay planes de viaje</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+{% endblock %}

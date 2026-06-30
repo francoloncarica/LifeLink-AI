@@ -1,0 +1,38 @@
+{% extends 'core/base.html' %}
+{% block title %}Plan de viaje · LifeLink AI{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Plan de viaje</h1>
+      <p class="page-sub">Detalles y recomendaciones para tu destino.</p>
+    </div>
+    <div class="page-actions">
+      <a class="btn" href="{% url 'core:travel' %}">Volver</a>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h2>{{ plan.destination_city }}, {{ plan.destination_country }}</h2>
+      <p class="sec-sub">{{ plan.start_date }} → {{ plan.end_date }}</p>
+      <p>{{ plan.summary }}</p>
+      <h3 style="margin-top:18px">Riesgo estimado: <span class="badge badge-warn">{{ plan.risk_level }}</span></h3>
+    </div>
+
+    <div class="card">
+      <h2>Prestadores recomendados</h2>
+      <div class="table-scroll" style="margin-top:8px">
+        <table>
+          <thead><tr><th>Nombre</th><th>Ciudad</th><th class="num">Camas</th></tr></thead>
+          <tbody>
+            {% for p in providers %}
+            <tr><td>{{ p.name }}</td><td>{{ p.city }}</td><td class="num">{{ p.available_beds }}</td></tr>
+            {% empty %}
+            <tr><td colspan="3" class="muted">No hay recomendaciones</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends 'core/base.html' %}
+{% load humanize %}
+{% block title %}Emergencias · LifeLink AI{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Emergencias</h1>
+      <p class="page-sub">Listado de eventos y su estado dentro de la orquestación.</p>
+    </div>
+    <div class="page-actions">
+      <a class="btn" href="{% url 'core:dashboard' %}">Volver</a>
+    </div>
+  </div>
+
+  <section>
+    <div class="card">
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Fecha</th><th>Paciente</th><th>Tipo</th><th>Severidad</th><th>Proveedor</th><th class="num">Score</th></tr></thead>
+          <tbody>
+            {% for e in emergencies %}
+            <tr>
+              <td>{{ e.triggered_at|naturaltime }}</td>
+              <td>{{ e.patient.full_name }}</td>
+              <td>{{ e.get_event_type_display }}</td>
+              <td><span class="sev sev-{{ e.severity }}">{{ e.severity }}</span></td>
+              <td>{{ e.selected_provider.name if e.selected_provider else '—' }}</td>
+              <td class="num">{{ e.decision_score|default:'—' }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="muted">No hay emergencias</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+{% endblock %}

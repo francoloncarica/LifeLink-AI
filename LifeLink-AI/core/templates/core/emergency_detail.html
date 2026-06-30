@@ -1,0 +1,64 @@
+{% extends 'core/base.html' %}
+{% block title %}Emergencia · LifeLink AI{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Emergencia</h1>
+      <p class="page-sub">Detalle del evento y pasos de la orquestación.</p>
+    </div>
+    <div class="page-actions">
+      <a class="btn" href="{% url 'core:emergencies' %}">Volver</a>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h2>Resumen del evento</h2>
+      <p class="sec-sub">Paciente: <strong>{{ event.patient.full_name }}</strong></p>
+      <table style="margin-top:8px">
+        <tbody>
+          <tr><td>Tipo</td><td>{{ event.get_event_type_display }}</td></tr>
+          <tr><td>Severidad</td><td><span class="sev sev-{{ event.severity }}">{{ event.severity }}</span></td></tr>
+          <tr><td>Ubicación</td><td>{{ event.location_desc }} — {{ event.city }}</td></tr>
+          <tr><td>Score</td><td>{{ event.decision_score|default:'—' }}</td></tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top:18px">Acciones</h3>
+      <div class="timeline">
+        {% for a in event.actions.all %}
+          <div class="tl-item {% if a.status=='done' %}done{% elif a.status=='active' %}active{% else %}pending{% endif %}">
+            <div class="tl-dot">{{ forloop.counter }}</div>
+            <div class="tl-body">
+              <div class="tl-title">{{ a.title }} <span class="tl-status">{{ a.get_status_display }}</span></div>
+              {% if a.detail %}<div class="tl-detail">{{ a.detail }}</div>{% endif %}
+            </div>
+          </div>
+        {% empty %}
+          <div class="muted">No hay acciones registradas.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Mapa</h2>
+      <div id="map_event" class="map tall"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+        <a class="btn btn-secondary" href="{% url 'core:providers' %}">Ver prestadores</a>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
+
+{% block scripts %}
+  {{ block.super }}
+  <script>
+    const map = L.map('map_event', {zoomControl:false}).setView([{{ event.lat }}, {{ event.lng }}], 12);
+    LL.tiles().addTo(map);
+    L.marker([{{ event.lat }}, {{ event.lng }}]).addTo(map).bindPopup('Evento');
+    {% for c in event.candidates.all %}
+      L.marker([{{ c.provider.lat }}, {{ c.provider.lng }}],{icon:LL.icon('#0a84ff')}).addTo(map).bindPopup('{{ c.provider.name }} — Score {{ c.score }}');
+    {% endfor %}
+  </script>
+{% endblock %}

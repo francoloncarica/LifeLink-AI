@@ -1,0 +1,36 @@
+{% extends 'core/base.html' %}
+{% block title %}Prestadores · LifeLink AI{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Red de prestadores</h1>
+      <p class="page-sub">Listado de hospitales y clínicas en la red, sus especialidades y disponibilidad.</p>
+    </div>
+    <div class="page-actions">
+      <a class="btn" href="{% url 'core:dashboard' %}">Volver</a>
+    </div>
+  </div>
+
+  <section>
+    <div class="card">
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Nombre</th><th>Ciudad</th><th>Especialidades</th><th>Redes</th><th class="num">Camas</th></tr></thead>
+          <tbody>
+            {% for p in providers %}
+            <tr>
+              <td>{{ p.name }}</td>
+              <td>{{ p.city }}</td>
+              <td>{{ p.specialties.all|join:", " }}</td>
+              <td>{{ p.accepted_networks.all|join:", " }}</td>
+              <td class="num">{{ p.available_beds }} / {{ p.total_beds }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="muted">No hay prestadores cargados</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+{% endblock %}

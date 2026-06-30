@@ -1,0 +1,16 @@
+# Render.com blueprint for LifeLink AI.
+# Deploy: push to GitHub → Render → New → Blueprint → pick this repo.
+services:
+  - type: web
+    name: lifelink-ai
+    runtime: python
+    plan: free
+    buildCommand: "bash ./build.sh"
+    startCommand: "gunicorn lifelink.wsgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true

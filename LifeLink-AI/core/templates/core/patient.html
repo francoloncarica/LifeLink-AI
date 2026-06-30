@@ -1,0 +1,72 @@
+{% extends 'core/base.html' %}
+{% block title %}Paciente · LifeLink AI{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Paciente</h1>
+      <p class="page-sub">Datos personales, condiciones, alergias y contactos de emergencia.</p>
+    </div>
+    <div class="page-actions">
+      <a class="btn" href="{% url 'core:dashboard' %}">Volver</a>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h2>Datos</h2>
+      <p class="sec-sub">Información básica y contacto.</p>
+      <table style="margin-top:8px">
+        <tbody>
+          <tr><td>Nombre</td><td>{{ patient.full_name }}</td></tr>
+          <tr><td>Fecha de nacimiento</td><td>{{ patient.date_of_birth }}</td></tr>
+          <tr><td>Teléfono</td><td>{{ patient.phone }}</td></tr>
+          <tr><td>Dirección</td><td>{{ patient.home_address }}, {{ patient.home_city }}</td></tr>
+          <tr><td>Idiomas</td><td>{{ patient.languages }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Contactos</h2>
+      <p class="sec-sub">Contactos a notificar.</p>
+      <div class="table-scroll" style="margin-top:8px">
+        <table>
+          <thead><tr><th>Nombre</th><th>Relación</th><th>Teléfono</th></tr></thead>
+          <tbody>
+            {% for c in patient.contacts.all %}
+            <tr><td>{{ c.name }}</td><td>{{ c.relationship }}</td><td>{{ c.phone }}</td></tr>
+            {% empty %}
+            <tr><td colspan="3" class="muted">No hay contactos</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <div class="card">
+      <h2>Condiciones y medicamentos</h2>
+      <p class="sec-sub">Resumen médico.</p>
+      <div style="display:flex;gap:18px;flex-wrap:wrap">
+        <div style="flex:1">
+          <h3>Condiciones</h3>
+          <ul>
+            {% for cond in patient.conditions.all %}
+              <li>{{ cond.name }} — {{ cond.get_severity_display }}</li>
+            {% empty %}<li class="muted">Sin condiciones registradas</li>{% endfor %}
+          </ul>
+        </div>
+        <div style="flex:1">
+          <h3>Alergias</h3>
+          <ul>
+            {% for a in patient.allergies.all %}
+              <li>{{ a.substance }} — {{ a.reaction }} ({{ a.get_severity_display }})</li>
+            {% empty %}<li class="muted">Sin alergias registradas</li>{% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+{% endblock %}
