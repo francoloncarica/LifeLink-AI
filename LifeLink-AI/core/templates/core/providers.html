@@ -13,24 +13,81 @@
 
   <section>
     <div class="card">
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Nombre</th><th>Ciudad</th><th>Especialidades</th><th>Redes</th><th class="num">Camas</th></tr></thead>
-          <tbody>
+      <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+        <div style="flex:1;min-width:320px">
+          <h3>Filtros</h3>
+          <form method="get">
+            <div class="filters">
+              <div>
+                <label class="field">Especialidad</label>
+                <select name="specialty">
+                  <option value="">Todas</option>
+                  {% for s in specialties %}<option value="{{ s.code }}" {% if f.specialty == s.code %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="field">Buscar</label>
+                <input type="search" name="q" value="{{ f.q }}">
+              </div>
+              <div style="align-self:end">
+                <button class="btn" type="submit">Aplicar</button>
+              </div>
+            </div>
+          </form>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 8px">
+            <div class="pill">{{ count }} prestadores</div>
+            <div class="pill">{{ beds }} camas disponibles</div>
+            <div class="pill">Calidad promedio {{ avg_quality }}</div>
+          </div>
+          <h3 style="margin-top:18px">Red activa</h3>
+          <div class="grid-3">
             {% for p in providers %}
-            <tr>
-              <td>{{ p.name }}</td>
-              <td>{{ p.city }}</td>
-              <td>{{ p.specialties.all|join:", " }}</td>
-              <td>{{ p.accepted_networks.all|join:", " }}</td>
-              <td class="num">{{ p.available_beds }} / {{ p.total_beds }}</td>
-            </tr>
+            <article class="card-flat" style="padding:16px">
+              <div style="display:flex;justify-content:space-between;gap:8px;align-items:start">
+                <div>
+                  <div style="font-weight:700">{{ p.name }}</div>
+                  <div class="muted" style="font-size:12px;margin-top:2px">{{ p.city|default:'—' }} · {{ p.address|default:'Sin dirección cargada' }}</div>
+                </div>
+                <span class="badge badge-good">{{ p.available_beds }} / {{ p.total_beds }} camas</span>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0">
+                {% for s in p.specialties.all %}
+                  <span class="pill">{{ s.name }}</span>
+                {% empty %}
+                  <span class="pill">Sin especialidades</span>
+                {% endfor %}
+              </div>
+              <div class="muted" style="font-size:12px">Coberturas: {% for n in p.accepted_networks.all %}{{ n.name }}{% if not forloop.last %}, {% endif %}{% empty %}Sin redes{% endfor %}</div>
+              <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">
+                <span class="pill">Qual. {{ p.quality_rating|floatformat:1 }}/5</span>
+                <span class="pill">{{ p.get_kind_display }}</span>
+              </div>
+            </article>
             {% empty %}
-            <tr><td colspan="5" class="muted">No hay prestadores cargados</td></tr>
+            <div class="card-flat muted">No hay prestadores cargados</div>
             {% endfor %}
-          </tbody>
-        </table>
+          </div>
+        </div>
+        <div style="width:400px;min-width:300px">
+          <h3>Mapa</h3>
+          <div id="providers_map" class="map"></div>
+          <div style="margin-top:10px" class="muted">Camas disponibles: <strong>{{ beds }}</strong> · Calidad promedio: <strong>{{ avg_quality }}</strong></div>
+          <div class="card-flat" style="margin-top:12px;padding:14px">
+            <div style="font-weight:700;margin-bottom:6px">Ejemplos destacados</div>
+            <div class="muted">Hospital Italiano, Favaloro, FLENI, Hospital Alemán y centros internacionales para viajes.</div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
+{% endblock %}
+
+{% block scripts %}
+  {{ block.super }}
+  <script>
+    const provs = {{ providers_json|safe }};
+    const mapP = L.map('providers_map', {zoomControl:false}).setView([ -34.6037, -58.3816 ], 10);
+    LL.tiles().addTo(mapP);
+    provs.forEach(p=> L.marker([p.lat,p.lng],{icon:LL.icon('#0a84ff')}).addTo(mapP).bindPopup(p.name));
+  </script>
 {% endblock %}

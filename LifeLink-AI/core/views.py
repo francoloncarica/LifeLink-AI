@@ -1,6 +1,7 @@
 import json
 
 from django.contrib import messages
+from django.core.management import call_command
 from django.db.models import Avg, Sum, Count, Q
 from django.http import Http404
 from django.shortcuts import render, redirect, get_object_or_404
@@ -35,6 +36,13 @@ def _providers_geojson(providers):
     } for p in providers]
 
 
+def _ensure_demo_data():
+    if PatientProfile.objects.exists() or Provider.objects.exists() or Specialty.objects.exists():
+        return False
+    call_command('seed_demo')
+    return True
+
+
 def _float(val, default=None):
     try:
         return float(val)
@@ -46,6 +54,7 @@ def _float(val, default=None):
 #  DASHBOARD
 # ------------------------------------------------------------------
 def dashboard(request):
+    _ensure_demo_data()
     patient = _primary_patient()
     providers = list(Provider.objects.all())
 
@@ -78,17 +87,23 @@ def dashboard(request):
 
     ctx = {
         'patient': patient,
+        'providers': providers,
+        'emergencies_count': open_events.count(),
+        'providers_count': len(providers),
+        'travel_count': TravelPlan.objects.count(),
         'kpi_open': open_events.count(),
         'kpi_providers': len(providers),
         'kpi_beds': beds_free,
         'kpi_avg_eta': round(avg_eta) if avg_eta else None,
         'kpi_readiness': patient.readiness_score if patient else 0,
         'recent': recent,
+        'recent_emergencies': recent,
         'open_events': list(open_events.select_related('selected_provider')[:5]),
         'event_types': EmergencyEvent.EVENT_TYPES,
         'triggers': EmergencyEvent.TRIGGERS,
         'scenarios': scenarios,
         'map_center': [patient.home_lat, patient.home_lng] if patient else [-34.6037, -58.3816],
+        'map_center_json': json.dumps([patient.home_lat, patient.home_lng]) if patient else json.dumps([-34.6037, -58.3816]),
         'providers_json': json.dumps(_providers_geojson(providers)),
         'scenarios_json': json.dumps(scenarios),
     }
@@ -131,6 +146,7 @@ def sos_trigger(request):
 #  EMERGENCIES
 # ------------------------------------------------------------------
 def emergencies_list(request):
+    _ensure_demo_data()
     status = request.GET.get('status', '')
     qs = EmergencyEvent.objects.select_related('patient', 'selected_provider')
     if status:
@@ -142,7 +158,7 @@ def emergencies_list(request):
         'resolved': EmergencyEvent.objects.filter(status='resolved').count(),
     }
     return render(request, 'core/emergencies.html', {
-        'events': list(qs[:200]),
+        'emergencies': list(qs[:200]),
         'status': status,
         'counts': counts,
         'statuses': EmergencyEvent.STATUS,
@@ -150,33 +166,37 @@ def emergencies_list(request):
 
 
 def emergency_detail(request, pk):
+    _ensure_demo_data()
     event = get_object_or_404(
         EmergencyEvent.objects.select_related('patient', 'selected_provider', 'required_specialty'),
         pk=pk,
     )
     actions = list(event.actions.all())
     candidates = []
-    for c in event.candidates.select_related('provider'):
-        try:
-            breakdown = json.loads(c.breakdown_json) if c.breakdown_json else {}
-        except json.JSONDecodeError:
-            breakdown = {}
-        candidates.append({'obj': c, 'breakdown': breakdown})
+    for candidate in event.candidates.select_related('provider'):
+        candidates.append({
+            'provider': candidate.provider,
+            'score': candidate.score,
+            'reason': candidate.reason,
+        })
 
-    # Map: event location + candidate providers
     map_points = [{
-        'name': c['obj'].provider.name,
-        'lat': c['obj'].provider.lat,
-        'lng': c['obj'].provider.lng,
-        'score': c['obj'].score,
-        'eta': c['obj'].eta_min,
-        'selected': c['obj'].selected,
-    } for c in candidates]
+        'name': event.location_desc or event.patient.full_name,
+        'lat': event.lat,
+        'lng': event.lng,
+        'kind': 'Evento',
+    }]
+    if event.selected_provider:
+        map_points.append({
+            'name': event.selected_provider.name,
+            'lat': event.selected_provider.lat,
+            'lng': event.selected_provider.lng,
+            'kind': event.selected_provider.get_kind_display(),
+        })
 
-    patient = event.patient
     return render(request, 'core/emergency_detail.html', {
         'event': event,
-        'patient': patient,
+        'patient': event.patient,
         'actions': actions,
         'candidates': candidates,
         'event_point': json.dumps({'lat': event.lat, 'lng': event.lng,
@@ -201,6 +221,7 @@ def emergency_resolve(request, pk):
 #  PATIENT
 # ------------------------------------------------------------------
 def patient_detail(request, pk=None):
+    _ensure_demo_data()
     if pk:
         patient = get_object_or_404(PatientProfile, pk=pk)
     else:
@@ -226,6 +247,7 @@ def patient_detail(request, pk=None):
 #  PROVIDERS
 # ------------------------------------------------------------------
 def providers_list(request):
+    _ensure_demo_data()
     kind = request.GET.get('kind', '')
     specialty = request.GET.get('specialty', '')
     q = request.GET.get('q', '')
@@ -260,6 +282,7 @@ def providers_list(request):
 #  TRAVEL PLANS
 # ------------------------------------------------------------------
 def travel_list(request):
+    _ensure_demo_data()
     patient = _primary_patient()
     plans = list(TravelPlan.objects.select_related('patient'))
     suggestions = [

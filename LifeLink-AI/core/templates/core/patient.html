@@ -13,22 +13,56 @@
 
   <div class="grid-2">
     <div class="card">
-      <h2>Datos</h2>
-      <p class="sec-sub">Información básica y contacto.</p>
-      <table style="margin-top:8px">
+      <h2>Ficha clínica</h2>
+      <p class="sec-sub">Resumen clínico y estado de preparación del paciente.</p>
+      <div class="grid-3" style="margin-top:8px">
+        <div class="card-flat">
+          <div class="label" style="margin-bottom:4px">Preparación</div>
+          <div class="val" style="font-size:24px">{{ patient.readiness_score }}%</div>
+          <div class="sub">Perfil completo para emergencias</div>
+        </div>
+        <div class="card-flat">
+          <div class="label" style="margin-bottom:4px">Grupo sanguíneo</div>
+          <div class="val" style="font-size:24px">{{ patient.get_blood_type_display }}</div>
+          <div class="sub">Información crítica para transfusión</div>
+        </div>
+        <div class="card-flat">
+          <div class="label" style="margin-bottom:4px">Cobertura activa</div>
+          <div class="val" style="font-size:24px">{% if policies %}{{ policies.0.network.name }}{% else %}—{% endif %}</div>
+          <div class="sub">Plan priorizado para atención</div>
+        </div>
+      </div>
+      <table style="margin-top:12px">
         <tbody>
           <tr><td>Nombre</td><td>{{ patient.full_name }}</td></tr>
-          <tr><td>Fecha de nacimiento</td><td>{{ patient.date_of_birth }}</td></tr>
-          <tr><td>Teléfono</td><td>{{ patient.phone }}</td></tr>
-          <tr><td>Dirección</td><td>{{ patient.home_address }}, {{ patient.home_city }}</td></tr>
+          <tr><td>Edad</td><td>{{ patient.age|default:'—' }}</td></tr>
+          <tr><td>Teléfono</td><td>{{ patient.phone|default:'Sin teléfono cargado' }}</td></tr>
           <tr><td>Idiomas</td><td>{{ patient.languages }}</td></tr>
+          <tr><td>Notas</td><td>{{ patient.notes|default:'Sin notas adicionales' }}</td></tr>
         </tbody>
       </table>
     </div>
 
     <div class="card">
+      <h2>Domicilio</h2>
+      <p class="sec-sub">Dirección y ubicación de referencia.</p>
+      <div class="card-flat" style="padding:14px">
+        <div style="font-weight:700">Ubicación principal</div>
+        <div class="muted" style="margin-top:4px">{{ patient.home_address|default:'Sin domicilio registrado' }}, {{ patient.home_city|default:'Sin ciudad' }}</div>
+        <div class="muted" style="margin-top:4px">{{ patient.home_country|default:'Sin país' }}</div>
+        <div class="pill" style="margin-top:10px">Lat/Lng: {{ patient.home_lat }}, {{ patient.home_lng }}</div>
+      </div>
+      <div class="card-flat" style="margin-top:10px;padding:14px">
+        <div style="font-weight:700">Resumen de respuesta</div>
+        <div class="muted" style="margin-top:4px">Ambulancia, contactos y cobertura listos para activación inmediata.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top:16px">
+    <div class="card">
       <h2>Contactos</h2>
-      <p class="sec-sub">Contactos a notificar.</p>
+      <p class="sec-sub">Contactos a notificar en caso de emergencia.</p>
       <div class="table-scroll" style="margin-top:8px">
         <table>
           <thead><tr><th>Nombre</th><th>Relación</th><th>Teléfono</th></tr></thead>
@@ -42,27 +76,60 @@
         </table>
       </div>
     </div>
+
+    <div class="card">
+      <h2>Emergencias recientes</h2>
+      <p class="sec-sub">Últimos eventos asociados al paciente.</p>
+      <div class="table-scroll" style="margin-top:8px">
+        <table>
+          <thead><tr><th>Tipo</th><th>Estado</th><th>Proveedor</th></tr></thead>
+          <tbody>
+            {% for event in events %}
+            <tr>
+              <td>{{ event.get_event_type_display }}</td>
+              <td>{{ event.get_status_display }}</td>
+              <td>{% if event.selected_provider %}{{ event.selected_provider.name }}{% else %}—{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="muted">Sin emergencias registradas</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <section>
     <div class="card">
-      <h2>Condiciones y medicamentos</h2>
-      <p class="sec-sub">Resumen médico.</p>
+      <h2>Condiciones, alergias y cobertura</h2>
+      <p class="sec-sub">Resumen médico y cobertura del paciente.</p>
       <div style="display:flex;gap:18px;flex-wrap:wrap">
         <div style="flex:1">
           <h3>Condiciones</h3>
           <ul>
-            {% for cond in patient.conditions.all %}
+            {% for cond in conditions %}
               <li>{{ cond.name }} — {{ cond.get_severity_display }}</li>
             {% empty %}<li class="muted">Sin condiciones registradas</li>{% endfor %}
+          </ul>
+          <h3>Medicamentos</h3>
+          <ul>
+            {% for m in medications %}
+              <li>{{ m.name }} {% if m.dose %}- {{ m.dose }}{% endif %} {% if m.frequency %}({{ m.frequency }}){% endif %}</li>
+            {% empty %}<li class="muted">Sin medicación registrada</li>{% endfor %}
           </ul>
         </div>
         <div style="flex:1">
           <h3>Alergias</h3>
           <ul>
-            {% for a in patient.allergies.all %}
+            {% for a in allergies %}
               <li>{{ a.substance }} — {{ a.reaction }} ({{ a.get_severity_display }})</li>
             {% empty %}<li class="muted">Sin alergias registradas</li>{% endfor %}
+          </ul>
+          <h3 style="margin-top:12px">Cobertura</h3>
+          <ul>
+            {% for p in policies %}
+              <li>{{ p.network.name }} — {{ p.plan }} {% if p.member_id %}({{ p.member_id }}){% endif %} · {{ p.get_coverage_level_display }}</li>
+            {% empty %}<li class="muted">Sin cobertura registrada</li>{% endfor %}
           </ul>
         </div>
       </div>

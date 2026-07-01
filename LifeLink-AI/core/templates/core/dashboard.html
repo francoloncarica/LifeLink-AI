@@ -31,6 +31,70 @@
     </div>
   </section>
 
+  <section style="margin-top:18px">
+    <div class="grid-2">
+      <div class="card">
+        <h2>Simular SOS</h2>
+        <p class="sec-sub">Dispara una emergencia de prueba para ver la orquestación.</p>
+        <form method="post" action="{% url 'core:sos' %}" id="sosForm">
+          {% csrf_token %}
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="flex:1">
+              <label class="field">Tipo de evento</label>
+              <select name="event_type">
+                {% for code,label in event_types %}
+                  <option value="{{ code }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div style="width:180px">
+              <label class="field">Disparo</label>
+              <select name="trigger_type">
+                {% for code,label in triggers %}
+                  <option value="{{ code }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="filters" style="margin-top:12px">
+            <div>
+              <label class="field">Escenario</label>
+              <select id="scenarioSel">
+                {% for s in scenarios %}
+                  <option data-lat="{{ s.lat }}" data-lng="{{ s.lng }}" value="{{ s.key }}">{{ s.icon }} {{ s.label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <input type="hidden" name="lat" id="sosLat">
+            <input type="hidden" name="lng" id="sosLng">
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button class="btn btn-emergency" type="submit">Disparar SOS</button>
+            <button type="button" class="btn btn-secondary" id="fillHome">Usar mi domicilio</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>En curso</h2>
+        <p class="sec-sub">Emergencias actualmente orquestando.</p>
+        <div class="timeline" style="margin-top:12px">
+          {% for e in open_events %}
+            <div class="tl-item active">
+              <div class="tl-dot">⚠</div>
+              <div class="tl-body">
+                <div class="tl-title">{{ e.get_event_type_display }} — {{ e.patient.full_name }}</div>
+                <div class="tl-detail">{{ e.location_desc }} · {{ e.city }} · Score: {{ e.decision_score|default:'—' }}</div>
+              </div>
+            </div>
+          {% empty %}
+            <div class="muted">No hay emergencias en curso</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
   <div class="grid-2" style="margin-top:22px">
     <div class="card">
       <h2>Mapa</h2>
@@ -86,11 +150,28 @@
 {% block scripts %}
   {{ block.super }}
   <script>
-    const map = L.map('map', {zoomControl:false}).setView([{{ patient.home_lat }}, {{ patient.home_lng }}], 12);
+    const mapCenter = {{ map_center_json|safe }};
+    const map = L.map('map', {zoomControl:false}).setView(mapCenter, 12);
     LL.tiles().addTo(map);
-    L.marker([{{ patient.home_lat }}, {{ patient.home_lng }}]).addTo(map).bindPopup('{{ patient.full_name }}');
-    {% for p in providers %}
-      L.marker([{{ p.lat }}, {{ p.lng }}], {icon:LL.icon('#0a84ff')}).addTo(map).bindPopup('{{ p.name }}');
-    {% endfor %}
+    const patientMarker = L.marker(mapCenter).addTo(map).bindPopup('{{ patient.full_name|escapejs }}');
+    const providers = {{ providers_json|safe }};
+    providers.forEach(p=>{
+      L.marker([p.lat, p.lng], {icon:LL.icon('#0a84ff')}).addTo(map).bindPopup(p.name);
+    });
+
+    // SOS helpers
+    (function(){
+      const sel = document.getElementById('scenarioSel');
+      const latFld = document.getElementById('sosLat');
+      const lngFld = document.getElementById('sosLng');
+      function fillFromSel(){
+        const o = sel.options[sel.selectedIndex];
+        latFld.value = o.dataset.lat || '';
+        lngFld.value = o.dataset.lng || '';
+      }
+      if(sel){ sel.addEventListener('change', fillFromSel); fillFromSel(); }
+      const btnHome = document.getElementById('fillHome');
+      if(btnHome){ btnHome.addEventListener('click', ()=>{ latFld.value=mapCenter[0]; lngFld.value=mapCenter[1]; }); }
+    })();
   </script>
 {% endblock %}
